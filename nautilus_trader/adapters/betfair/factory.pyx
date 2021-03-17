@@ -26,24 +26,24 @@ from nautilus_trader.model.identifiers cimport AccountId
 
 
 try:
-    import ccxtpro
+    import betfairlightweight
+    from betfairlightweight import APIClient
 except ImportError:
     if "pytest" in sys.modules:
         # Currently under test so continue
-        import ccxt as ccxtpro
+        import bflw as betfairlightweight
     else:
-        raise ImportError("ccxtpro is not installed, "
-                          "installation instructions can be found at https://ccxt.pro")
+        raise ImportError("betfairlightweight is not installed, "
+                          "installation instructions can be found at https://github.com/liampauling/betfair")
 
 
-cdef class CCXTClientsFactory:
+cdef class BetfairClientsFactory:
     """
-    Provides data and execution clients for the unified CCXT Pro API.
+    Provides data and execution clients for the Betfair API.
     """
 
     @staticmethod
     def create(
-        client_cls not None,
         dict config not None,
         LiveDataEngine data_engine not None,
         LiveExecutionEngine exec_engine not None,
@@ -51,12 +51,10 @@ cdef class CCXTClientsFactory:
         LiveLogger logger not None,
     ):
         """
-        Create new CCXT unified clients.
+        Create new Betfair unified clients.
 
         Parameters
         ----------
-        client_cls : class
-            The class to call to return a new CCXT Pro client.
         config : dict
             The configuration dictionary.
         data_engine : LiveDataEngine
@@ -70,48 +68,19 @@ cdef class CCXTClientsFactory:
 
         Returns
         -------
-        CCXTDataClient, CCXTExecClient
+        betfairDataClient, betfairExecClient
 
         """
         # Create client
-        client: ccxtpro.Exchange = client_cls({
-            "apiKey": os.getenv(config.get("api_key", ""), ""),
-            "secret": os.getenv(config.get("api_secret", ""), ""),
-            "timeout": 10000,         # Hard coded for now
-            "enableRateLimit": True,  # Hard coded for now
-            "asyncio_loop": data_engine.get_event_loop(),
+        client: APIClient = APIClient(
+            username=os.getenv(config.get("username", ""), ""),
+            password=os.getenv(config.get("password", ""), ""),
+            app_key=os.getenv(config.get("app_key", ""), ""),
+            lightweight=True,
+        )
 
-            # Set cache limits
-            "options": {
-                "OHLCVLimit": 1,
-                "balancesLimit": 1,
-                "tradesLimit": 1,
-                "ordersLimit": 1,
-            },
-        })
-
-        if config.get("sandbox_mode", False):
-            client.set_sandbox_mode(True)
-
+        # Create client
         if config.get("data_client", True):
-            # Check required CCXT methods are available
-            if not client.has.get("fetchTrades", False):
-                raise RuntimeError(f"CCXT `fetch_trades` not available "
-                                   f"for {client.name}.")
-            if not client.has.get("fetchOHLCV", False):
-                raise RuntimeError(f"CCXT `fetch_ohlcv` not available "
-                                   f"for {client.name}.")
-            if not client.has.get("watchOrderBook", False):
-                raise RuntimeError(f"CCXT `watch_order_book` not available "
-                                   f"for {client.name}.")
-            if not client.has.get("watchTrades", False):
-                raise RuntimeError(f"CCXT `watch_trades` not available "
-                                   f"for {client.name}.")
-            if not client.has.get("watchOHLCV", False):
-                raise RuntimeError(f"CCXT `watch_ohlcv` not available "
-                                   f"for {client.name}.")
-
-            # Create client
             data_client = CCXTDataClient(
                 client=client,
                 engine=data_engine,
@@ -123,20 +92,6 @@ cdef class CCXTClientsFactory:
             data_client = None
 
         if config.get("exec_client", True):
-            # Check required CCXT methods are available
-            if not client.has.get("fetchBalance", False):
-                raise RuntimeError(f"CCXT `fetch_balance` not available "
-                                   f"for {client.name}.")
-            if not client.has.get("watchBalance", False):
-                raise RuntimeError(f"CCXT `watch_balance` not available "
-                                   f"for {client.name}.")
-            if not client.has.get("watchOrders", False):
-                raise RuntimeError(f"CCXT `watch_orders` not available "
-                                   f"for {client.name}.")
-            if not client.has.get("watchMyTrades", False):
-                raise RuntimeError("CCXT `watch_my_trades` not available "
-                                   f"for {client.name}.")
-
             # Get account identifier env variable or set default
             account_id_env_var = os.getenv(config.get("account_id", ""), "001")
 

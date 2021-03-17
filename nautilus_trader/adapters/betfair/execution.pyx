@@ -16,9 +16,6 @@
 import asyncio
 from decimal import Decimal
 
-import ccxt
-from ccxt.base.errors import BaseError as CCXTError
-
 from cpython.datetime cimport datetime
 
 from nautilus_trader.adapters.ccxt.providers cimport CCXTInstrumentProvider
@@ -56,14 +53,14 @@ from nautilus_trader.model.order.base cimport PassiveOrder
 cdef int _SECONDS_IN_HOUR = 60 * 60
 
 
-cdef class CCXTExecutionClient(LiveExecutionClient):
+cdef class BetfairExecutionClient(LiveExecutionClient):
     """
     Provides an execution client for the unified CCXT Pro API.
     """
 
     def __init__(
         self,
-        client not None: ccxt.Exchange,
+        client not None: APIClient,
         AccountId account_id not None,
         LiveExecutionEngine engine not None,
         LiveClock clock not None,

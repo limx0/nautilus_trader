@@ -20,7 +20,7 @@ from nautilus_trader.model.identifiers cimport InstrumentId
 from nautilus_trader.model.instrument cimport Instrument
 
 
-cdef class CCXTInstrumentProvider(InstrumentProvider):
+cdef class BetfairInstrumentProvider(InstrumentProvider):
     cdef object _client
     cdef object _currencies
 

@@ -18,7 +18,7 @@ import json
 import unittest
 from unittest.mock import MagicMock
 
-from nautilus_trader.adapters.ccxt.providers import CCXTInstrumentProvider
+from nautilus_trader.adapters.betfair.providers import CCXTInstrumentProvider
 from nautilus_trader.model.currencies import BTC
 from nautilus_trader.model.currencies import USDT
 from nautilus_trader.model.currency import Currency
@@ -31,10 +31,10 @@ from nautilus_trader.model.instrument import Instrument
 from tests import TESTS_PACKAGE_ROOT
 
 
-# import ccxt  # uncomment to test against real API
+# import betfairlightweight  # uncomment to test against real API
 
 
-TEST_PATH = TESTS_PACKAGE_ROOT + "/integration_tests/adapters/ccxt/responses/"
+TEST_PATH = TESTS_PACKAGE_ROOT + "/integration_tests/adapters/betfair/responses/"
 
 
 # Monkey patch magic mock

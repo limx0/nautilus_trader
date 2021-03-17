@@ -43,7 +43,6 @@ from nautilus_trader.model.identifiers cimport TradeMatchId
 from nautilus_trader.model.instrument cimport Instrument
 from nautilus_trader.model.objects cimport Price
 from nautilus_trader.model.objects cimport Quantity
-from nautilus_trader.model.order_book cimport OrderBook
 from nautilus_trader.model.tick cimport QuoteTick
 from nautilus_trader.model.tick cimport TradeTick
 
@@ -656,7 +655,6 @@ cdef class CCXTDataClient(LiveMarketDataClient):
             self._log.error(f"Cannot subscribe to order book (no instrument for {instrument_id.symbol}).")
             return
 
-        cdef OrderBook order_book = None
         try:
             while True:
                 try:
@@ -676,26 +674,25 @@ cdef class CCXTDataClient(LiveMarketDataClient):
                         continue
                     if asks is None:
                         continue
+                    # if order_book is None:
+                    #     order_book = OrderBook(
+                    #         instrument_id,
+                    #         level,
+                    #         depth,
+                    #         instrument.price_precision,
+                    #         instrument.size_precision,
+                    #         list(bids),
+                    #         list(asks),
+                    #         lob.get("nonce"),
+                    #         timestamp,
+                    #     )
+                    # else:
+                    #     # Currently inefficient while using CCXT. The order book
+                    #     # is regenerated with a snapshot on every update.
+                    #     order_book.apply_snapshot(list(bids), list(asks), lob.get("nonce"), timestamp)
 
-                    if order_book is None:
-                        order_book = OrderBook(
-                            instrument_id,
-                            level,
-                            depth,
-                            instrument.price_precision,
-                            instrument.size_precision,
-                            list(bids),
-                            list(asks),
-                            lob.get("nonce"),
-                            timestamp,
-                        )
-
-                    else:
-                        # Currently inefficient while using CCXT. The order book
-                        # is regenerated with a snapshot on every update.
-                        order_book.apply_snapshot(list(bids), list(asks), lob.get("nonce"), timestamp)
-
-                    self._handle_order_book(order_book)
+                    # self._handle_order_book(order_book)
+                    pass
                 except CCXTError as ex:
                     self._log_ccxt_error(ex, self._watch_order_book.__name__)
                     continue

@@ -16,7 +16,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-import ccxt
+from betfairlightweight import APIClient
 
 from nautilus_trader.common.providers cimport InstrumentProvider
 from nautilus_trader.model.c_enums.asset_class cimport AssetClass
@@ -33,18 +33,18 @@ from nautilus_trader.model.objects cimport Price
 from nautilus_trader.model.objects cimport Quantity
 
 
-cdef class CCXTInstrumentProvider(InstrumentProvider):
+cdef class BetfairInstrumentProvider(InstrumentProvider):
     """
     Provides a means of loading `Instrument` objects from a unified CCXT exchange.
     """
 
-    def __init__(self, client not None: ccxt.Exchange, bint load_all=False):
+    def __init__(self, client not None: APIClient, bint load_all=True):
         """
         Initialize a new instance of the `CCXTInstrumentProvider` class.
 
         Parameters
         ----------
-        client : ccxt.Exchange
+        client : APIClient
             The client for the provider.
         load_all : bool, optional
             If all instruments should be loaded at instantiation.
@@ -59,14 +59,6 @@ cdef class CCXTInstrumentProvider(InstrumentProvider):
 
         if load_all:
             self.load_all()
-
-    async def load_all_async(self):
-        """
-        Load all instruments for the venue asynchronously.
-        """
-        await self._client.load_markets(reload=True)
-        self._load_currencies()
-        self._load_instruments()
 
     cpdef void load_all(self) except *:
         """
