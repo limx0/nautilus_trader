@@ -32,6 +32,8 @@ from nautilus_trader.model.objects cimport Money
 from nautilus_trader.model.objects cimport Price
 from nautilus_trader.model.objects cimport Quantity
 
+VENUE = "betfair"
+
 
 cdef class BetfairInstrumentProvider(InstrumentProvider):
     """
@@ -55,7 +57,7 @@ cdef class BetfairInstrumentProvider(InstrumentProvider):
         self._client = client
         self._currencies = {}  # type: dict[str, Currency]
 
-        self.venue = Venue(client.name.upper())
+        self.venue = Venue(VENUE)
 
         if load_all:
             self.load_all()

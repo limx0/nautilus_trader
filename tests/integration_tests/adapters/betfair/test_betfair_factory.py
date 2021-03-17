@@ -13,16 +13,13 @@
 #  limitations under the License.
 # -------------------------------------------------------------------------------------------------
 
-import asyncio
-import unittest
-from unittest.mock import MagicMock
+import pytest
 
-from nautilus_trader.adapters.ccxt.data import CCXTDataClient
-from nautilus_trader.adapters.ccxt.execution import CCXTExecutionClient
-from nautilus_trader.adapters.ccxt.factory import CCXTClientsFactory
+from adapters.betfair.data import BetfairDataClient
+from adapters.betfair.execution import BetfairExecutionClient
+from adapters.betfair.factory import BetfairClientsFactory
 from nautilus_trader.common.clock import LiveClock
 from nautilus_trader.common.logging import LiveLogger
-from nautilus_trader.common.uuid import UUIDFactory
 from nautilus_trader.execution.database import BypassExecutionDatabase
 from nautilus_trader.live.data_engine import LiveDataEngine
 from nautilus_trader.live.execution_engine import LiveExecutionEngine
@@ -30,68 +27,70 @@ from nautilus_trader.model.identifiers import TraderId
 from nautilus_trader.trading.portfolio import Portfolio
 
 
-class CCXTClientFactoryTests(unittest.TestCase):
-    def setUp(self):
-        # Fixture Setup
-        self.clock = LiveClock()
-        self.uuid_factory = UUIDFactory()
-        self.trader_id = TraderId("TESTER", "001")
+@pytest.fixture()
+def clock():
+    return LiveClock()
 
-        # Fresh isolated loop testing pattern
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
 
-        self.logger = LiveLogger(self.clock)
+@pytest.fixture()
+def live_logger(clock):
+    return LiveLogger(clock)
 
-        self.portfolio = Portfolio(
-            clock=self.clock,
-            logger=self.logger,
-        )
 
-        self.data_engine = LiveDataEngine(
-            loop=self.loop,
-            portfolio=self.portfolio,
-            clock=self.clock,
-            logger=self.logger,
-        )
+@pytest.fixture()
+def portfolio(clock, live_logger):
+    return Portfolio(
+        clock=clock,
+        logger=live_logger,
+    )
 
-        database = BypassExecutionDatabase(trader_id=self.trader_id, logger=self.logger)
-        self.exec_engine = LiveExecutionEngine(
-            loop=self.loop,
-            database=database,
-            portfolio=self.portfolio,
-            clock=self.clock,
-            logger=self.logger,
-        )
 
-    def test_create(self):
-        # Arrange
-        config = {
-            "data_client": True,
-            "exec_client": True,
-            "account_id": "BITMEX_ACCOUNT_ID",  # value is the environment variable name
-            "api_key": "BITMEX_API_KEY",  # value is the environment variable name
-            "api_secret": "BITMEX_API_SECRET",  # value is the environment variable name
-        }
+@pytest.fixture()
+def data_engine(event_loop, clock, live_logger, portfolio):
+    return LiveDataEngine(
+        loop=event_loop,
+        portfolio=portfolio,
+        clock=clock,
+        logger=live_logger,
+    )
 
-        # Mock client
-        mock_bitmex = MagicMock()
-        mock_bitmex.name = "bitmex"
 
-        # Mock constructor method to return the mock client
-        client_cls = MagicMock()
-        client_cls.return_value = mock_bitmex
+@pytest.fixture()
+@pytest.mark.asyncio()
+def exec_engine(event_loop, clock, live_logger, portfolio):
+    trader_id = TraderId("TESTER", "001")
+    database = BypassExecutionDatabase(trader_id=trader_id, logger=live_logger)
+    return LiveExecutionEngine(
+        loop=event_loop,
+        database=database,
+        portfolio=portfolio,
+        clock=clock,
+        logger=live_logger,
+    )
 
-        # Act
-        data_client, exec_client = CCXTClientsFactory.create(
-            client_cls=client_cls,
-            config=config,
-            data_engine=self.data_engine,
-            exec_engine=self.exec_engine,
-            clock=self.clock,
-            logger=self.logger,
-        )
 
-        # Assert
-        self.assertEqual(CCXTDataClient, type(data_client))
-        self.assertEqual(CCXTExecutionClient, type(exec_client))
+@pytest.mark.asyncio()
+def test_create(mocker, data_engine, exec_engine, clock, live_logger):
+    config = {
+        "data_client": True,
+        "exec_client": True,
+    }
+
+    # TODO - Fix mock for login assertion
+    # Mock client
+    mocker.patch("betfairlightweight.endpoints.login.Login.__call__")
+    # mock_login = mocker.patch("betfairlightweight.endpoints.login.Login.request")
+
+    data_client, exec_client = BetfairClientsFactory.create(
+        config=config,
+        data_engine=data_engine,
+        exec_engine=exec_engine,
+        clock=clock,
+        logger=live_logger,
+    )
+
+    # Assert
+    assert BetfairDataClient == type(data_client)
+    assert BetfairExecutionClient == type(exec_client)
+    # TODO - assert login called
+    # assert mock_login.assert_called_once_with()
