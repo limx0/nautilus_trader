@@ -16,6 +16,8 @@
 import asyncio
 from decimal import Decimal
 
+import betfairlightweight
+
 from cpython.datetime cimport datetime
 
 from nautilus_trader.adapters.ccxt.providers cimport CCXTInstrumentProvider
@@ -55,24 +57,24 @@ cdef int _SECONDS_IN_HOUR = 60 * 60
 
 cdef class BetfairExecutionClient(LiveExecutionClient):
     """
-    Provides an execution client for the unified CCXT Pro API.
+    Provides an execution client for Betfair.
     """
 
     def __init__(
         self,
-        client not None: APIClient,
+        client not None: betfairlightweight.APIClient,
         AccountId account_id not None,
         LiveExecutionEngine engine not None,
         LiveClock clock not None,
         Logger logger not None,
     ):
         """
-        Initialize a new instance of the `CCXTExecutionClient` class.
+        Initialize a new instance of the `BetfairExecutionClient` class.
 
         Parameters
         ----------
-        client : ccxt.Exchange
-            The unified CCXT client.
+        client : betfairlightweight.APIClient
+            The Betfair client.
         account_id : AccountId
             The account identifier for the client.
         engine : LiveDataEngine
@@ -83,20 +85,23 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
             The logger for the client.
 
         """
-        cdef InstrumentProvider instrument_provider = CCXTInstrumentProvider(
-            client=client,
-            load_all=False,
-        )
+        # cdef InstrumentProvider instrument_provider = CCXTInstrumentProvider(
+        #     client=client,
+        #     load_all=False,
+        # )
+
+        # TODO: Temp
+        instrument_provider = None
 
         super().__init__(
-            client.name.upper(),
+            "BETFAIR",
             account_id,
             engine,
             instrument_provider,
             clock,
             logger,
             config={
-                "name": f"CCXTExecClient-{client.name.upper()}",
+                "name": f"BetfairExecClient",
             }
         )
 
@@ -143,8 +148,8 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
         try:
             await self._load_instruments()
             await self._update_balances()
-        except CCXTError as ex:
-            self._log_ccxt_error(ex, self._connect.__name__)
+        except betfairlightweight.BetfairError as ex:
+            self._log_betfair_error(ex, self._connect.__name__)
             return
 
         # Start streams
@@ -220,7 +225,7 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
                 )
                 order_trades = [trade for trade in trades if trade["order"] == order.id.value]
 
-            except CCXTError as ex:
+            except betfairlightweight.BetfairError as ex:
                 self._log_ccxt_error(ex, self._update_balances.__name__)
                 continue
             if response is None:
@@ -314,7 +319,7 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
         self.is_connected = False
         self._log.info("Disconnected.")
 
-# -- COMMAND HANDLERS ------------------------------------------------------------------------------
+    # -- COMMAND HANDLERS ------------------------------------------------------------------------------
 
     cpdef void submit_order(self, SubmitOrder command) except *:
         """
@@ -373,16 +378,16 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
 
         self._loop.create_task(self._cancel_order(command.cl_ord_id))
 
-# -- INTERNAL --------------------------------------------------------------------------------------
+    # -- INTERNAL --------------------------------------------------------------------------------------
 
-    cdef inline void _log_ccxt_error(self, ex, str method_name) except *:
+    cdef inline void _log_betfair_error(self, ex, str method_name) except *:
         self._log.warning(f"{type(ex).__name__}: {ex} in {method_name}")
 
     async def _run_after_delay(self, double delay, coro):
         await asyncio.sleep(delay)
         return await coro
 
-# -- REQUESTS --------------------------------------------------------------------------------------
+    # -- REQUESTS --------------------------------------------------------------------------------------
 
     async def _load_instruments(self):
         await self._instrument_provider.load_all_async()
@@ -403,13 +408,13 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
         except TypeError:
             # Temporary workaround for testing
             response = self._client.fetch_balance
-        except CCXTError as ex:
-            self._log_ccxt_error(ex, self._update_balances.__name__)
+        except betfairlightweight.BetfairError as ex:
+            self._log_betfair_error(ex, self._update_balances.__name__)
             return
 
         self._on_account_state(response)
 
-# -- STREAMS ---------------------------------------------------------------------------------------
+    # -- STREAMS ---------------------------------------------------------------------------------------
 
     async def _watch_balances(self):
         cdef dict params = {'type': 'spot'}  # TODO: Hard coded to spot account for now
@@ -419,8 +424,8 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
                 try:
                     event = await self._client.watch_balance(params)
                     self._on_account_state(event)
-                except CCXTError as ex:
-                    self._log_ccxt_error(ex, self._watch_balances.__name__)
+                except betfairlightweight.BetfairError as ex:
+                    self._log_betfair_error(ex, self._watch_balances.__name__)
                     continue
         except asyncio.CancelledError as ex:
             self._log.debug(f"Cancelled `_watch_balances` for {self.account_id}.")
@@ -434,8 +439,8 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
                     # events type is ArrayCacheBySymbolById
                     events = await self._client.watch_orders()
                     self._on_order_status(events[0])  # Only caching 1 event
-                except CCXTError as ex:
-                    self._log_ccxt_error(ex, self._watch_orders.__name__)
+                except betfairlightweight.BetfairError as ex:
+                    self._log_betfair_error(ex, self._watch_orders.__name__)
                     continue
         except asyncio.CancelledError as ex:
             self._log.debug(f"Cancelled `_watch_orders`.")
@@ -449,15 +454,15 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
                     # events type is ArrayCacheBySymbolById
                     events = await self._client.watch_my_trades()
                     self._on_exec_report(events[0])  # Only caching 1 event
-                except CCXTError as ex:
-                    self._log_ccxt_error(ex, self._watch_balances.__name__)
+                except betfairlightweight.BetfairError as ex:
+                    self._log_betfair_error(ex, self._watch_balances.__name__)
                     continue
         except asyncio.CancelledError as ex:
             self._log.debug(f"Cancelled `_watch_my_trades` for {self.account_id}.")
         except Exception as ex:
             self._log.exception(ex)
 
-# -- COMMANDS --------------------------------------------------------------------------------------
+    # -- COMMANDS --------------------------------------------------------------------------------------
 
     async def _submit_order(self, Order order):
         self._log.debug(f"Submitted {order}.")
@@ -477,7 +482,7 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
                 amount=str(order.quantity),
                 price=str(order.price) if isinstance(order, PassiveOrder) else None,
             )
-        except CCXTError as ex:
+        except betfairlightweight.BetfairError as ex:
             self._generate_order_rejected(
                 cl_ord_id=order.cl_ord_id,
                 reason=str(ex),
@@ -499,11 +504,11 @@ cdef class BetfairExecutionClient(LiveExecutionClient):
                 id=order.id.value,
                 symbol=order.symbol.value,
             )
-        except CCXTError as ex:
-            self._log_ccxt_error(ex, self._cancel_order.__name__)
+        except betfairlightweight.BetfairError as ex:
+            self._log_betfair_error(ex, self._cancel_order.__name__)
             return
 
-# -- EVENTS ----------------------------------------------------------------------------------------
+    # -- EVENTS ----------------------------------------------------------------------------------------
 
     cdef inline void _on_account_state(self, dict event) except *:
         cdef list balances = []

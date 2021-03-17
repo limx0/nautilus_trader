@@ -14,36 +14,27 @@
 # -------------------------------------------------------------------------------------------------
 
 import os
-import sys
 
-from nautilus_trader.adapters.ccxt.data cimport CCXTDataClient
-from nautilus_trader.adapters.ccxt.execution cimport CCXTExecutionClient
+import betfairlightweight
+
 from nautilus_trader.common.clock cimport LiveClock
 from nautilus_trader.common.logging cimport LiveLogger
 from nautilus_trader.live.data_engine cimport LiveDataEngine
 from nautilus_trader.live.execution_engine cimport LiveExecutionEngine
 from nautilus_trader.model.identifiers cimport AccountId
+from nautilus_trader.adapters.betfair.data cimport BetfairDataClient
+from nautilus_trader.adapters.betfair.execution cimport BetfairExecutionClient
 
-
-try:
-    import betfairlightweight
-    from betfairlightweight import APIClient
-except ImportError:
-    if "pytest" in sys.modules:
-        # Currently under test so continue
-        import bflw as betfairlightweight
-    else:
-        raise ImportError("betfairlightweight is not installed, "
-                          "installation instructions can be found at https://github.com/liampauling/betfair")
 
 
 cdef class BetfairClientsFactory:
     """
-    Provides data and execution clients for the Betfair API.
+    Provides data and execution clients for Betfair.
     """
 
     @staticmethod
     def create(
+        client_cls not None,
         dict config not None,
         LiveDataEngine data_engine not None,
         LiveExecutionEngine exec_engine not None,
@@ -51,10 +42,12 @@ cdef class BetfairClientsFactory:
         LiveLogger logger not None,
     ):
         """
-        Create new Betfair unified clients.
+        Create new Betfair clients.
 
         Parameters
         ----------
+        client_cls : class
+            The class to call to return a new Betfair client.
         config : dict
             The configuration dictionary.
         data_engine : LiveDataEngine
@@ -68,20 +61,31 @@ cdef class BetfairClientsFactory:
 
         Returns
         -------
-        betfairDataClient, betfairExecClient
+        BetfairDataClient, BetfairExecClient
 
         """
         # Create client
-        client: APIClient = APIClient(
-            username=os.getenv(config.get("username", ""), ""),
-            password=os.getenv(config.get("password", ""), ""),
-            app_key=os.getenv(config.get("app_key", ""), ""),
-            lightweight=True,
-        )
+        # TODO: Change the below based on config options?
+        client: betfairlightweight.APIClient = client_cls({
+            "apiKey": os.getenv(config.get("api_key", ""), ""),
+            "secret": os.getenv(config.get("api_secret", ""), ""),
+            "timeout": 10000,         # Hard coded for now
+            "enableRateLimit": True,  # Hard coded for now
+            "asyncio_loop": data_engine.get_event_loop(),
 
-        # Create client
+            # Set cache limits
+            "options": {
+                "OHLCVLimit": 1,
+                "balancesLimit": 1,
+                "tradesLimit": 1,
+                "ordersLimit": 1,
+            },
+        })
+
         if config.get("data_client", True):
-            data_client = CCXTDataClient(
+
+            # Create client
+            data_client = BetfairDataClient(
                 client=client,
                 engine=data_engine,
                 clock=clock,
@@ -96,10 +100,10 @@ cdef class BetfairClientsFactory:
             account_id_env_var = os.getenv(config.get("account_id", ""), "001")
 
             # Set account identifier
-            account_id = AccountId(client.name.upper(), account_id_env_var)
+            account_id = AccountId("BETFAIR", account_id_env_var)
 
             # Create client
-            exec_client = CCXTExecutionClient(
+            exec_client = BetfairExecutionClient(
                 client=client,
                 account_id=account_id,
                 engine=exec_engine,

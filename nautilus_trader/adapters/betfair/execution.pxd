@@ -18,7 +18,7 @@ from nautilus_trader.model.identifiers cimport OrderId
 from nautilus_trader.model.order.base cimport Order
 
 
-cdef class CCXTExecutionClient(LiveExecutionClient):
+cdef class BetfairExecutionClient(LiveExecutionClient):
     cdef object _client
 
     cdef object _update_instruments_task
@@ -29,11 +29,11 @@ cdef class CCXTExecutionClient(LiveExecutionClient):
     cdef dict _cached_orders
     cdef dict _cached_filled
 
-# -- INTERNAL --------------------------------------------------------------------------------------
+    # -- INTERNAL --------------------------------------------------------------------------------------
 
-    cdef inline void _log_ccxt_error(self, ex, str method_name) except *
+    cdef inline void _log_betfair_error(self, ex, str method_name) except *
 
-# -- EVENTS ----------------------------------------------------------------------------------------
+    # -- EVENTS ----------------------------------------------------------------------------------------
 
     cdef inline void _on_account_state(self, dict event) except *
     cdef inline void _on_order_status(self, dict event) except *

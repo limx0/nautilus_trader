@@ -14,6 +14,5 @@
 # -------------------------------------------------------------------------------------------------
 
 
-cdef class CCXTClientsFactory:
-
+cdef class BetfairClientsFactory:
     pass
