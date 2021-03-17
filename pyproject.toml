@@ -33,7 +33,7 @@ generate-setup-file = false
 
 [tool.poetry.dependencies]
 python = "^3.7.9"
-ccxt = "^1.43.40"
+ccxt = "^1.43.43"
 cython = "^3.0a6"
 empyrical = "^0.5.5"
 ib_insync = "^0.9.65"
@@ -49,6 +49,7 @@ pyarrow = "^3.0.0"
 pytz = "^2020.5"
 redis = "3.5.3"
 scipy = "^1.6.1"
+tabulate = "^0.8.9"
 uvloop = { version = "^0.14.0", markers = "sys_platform != 'win32'" }
 
 [tool.poetry.dev-dependencies]
@@ -90,7 +91,7 @@ filterwarnings = [
 # Style configs #
 #################
 [tool.isort]
-src_paths = ["examples", "nautilus_trader", "scripts", "tests", "build.py", "noxfile.py"]
+src_paths = ["examples", "nautilus_trader", "scripts", "tests", "tools", "build.py", "noxfile.py"]
 atomic = true
 combine_as_imports = true
 ensure_newline_before_comments = true
@@ -112,11 +113,15 @@ use_parentheses = true
 target-version = ["py37", "py38"]
 include = '\.pyi?$'
 
+
+################
+# Lint configs #
+################
 [tool.flakehell]
 filename = ["*.py", "*.pyx", "*.pxd"]
 exclude = [".github", ".nox", ".pytest_cache", "__pycache__", "build", "dist", "docs", "noxfile.py"]
 format = "grouped"
-max_line_length = 120
+max_line_length = 120  # TODO: max_line_length config
 max_complexity = 10
 statistics = true
 
@@ -129,6 +134,9 @@ flake8-bugbear = ["+*"]
 flake8-rst-docstrings = ["+*"]
 pep8-naming = ["+*"]
 darglint = ["+*"]
+
+# W503 in error will be amended by flake8 soon
+# https://www.flake8rules.com/rules/W503.html
 
 [tool.flakehell.exceptions."examples/"]
 pycodestyle = ["-E402"]  # Allows relative imports from examples
