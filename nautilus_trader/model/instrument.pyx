@@ -545,7 +545,6 @@ cdef class BettingInstrument:
         runner_name: str,
         runner_sort_priority: str,
     ):
-        # Betting Exchange - Betfair, Matchbook
         self.instrument_id = instrument_id
 
         # Event Info - Basketball
