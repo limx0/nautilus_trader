@@ -16,8 +16,9 @@ import json
 
 import pytest
 
-from adapters.betfair.parsing import load_instruments
 from adapters.betfair.parsing import load_markets
+from adapters.betfair.parsing import load_markets_metadata
+from adapters.betfair.parsing import make_instrument
 from nautilus_trader.adapters.betfair.providers import BetfairInstrumentProvider
 from tests import TESTS_PACKAGE_ROOT
 
@@ -25,32 +26,59 @@ from tests import TESTS_PACKAGE_ROOT
 TEST_PATH = TESTS_PACKAGE_ROOT + "/integration_tests/adapters/betfair/responses/"
 
 
-@pytest.fixture()
-def provider(mocker, betfair_client) -> BetfairInstrumentProvider:
-    # TODO Mock client login
+@pytest.fixture(autouse=True)
+def mocks(mocker):
     mock_list_nav = mocker.patch(
         "betfairlightweight.endpoints.navigation.Navigation.list_navigation"
     )
     mock_list_nav.return_value = json.loads(open("./responses/navigation.json").read())
+
+    mock_market_catalogue = mocker.patch(
+        "betfairlightweight.endpoints.betting.Betting.list_market_catalogue"
+    )
+    mock_market_catalogue.return_value = json.loads(
+        open("./responses/market_metadata.json").read()
+    )
+
+
+@pytest.fixture()
+def provider(betfair_client) -> BetfairInstrumentProvider:
+    # TODO Mock client login
     return BetfairInstrumentProvider(client=betfair_client)
 
 
+@pytest.fixture()
+def market_metadata(betfair_client):
+    markets = load_markets(betfair_client, filter={"event_type_name": "Basketball"})
+    return load_markets_metadata(client=betfair_client, markets=markets)
+
+
 def test_load_markets(provider, betfair_client):
-    # provider.load_instruments()
-    # markets = load_markets(betfair_client)
-    # assert len(markets) == 3303282
+    markets = load_markets(betfair_client, filter={})
+    assert len(markets) == 13227
 
-    markets = load_markets(betfair_client, filter={"competition": "NBA"})
-    assert len(markets) == 3303282
-
-
-def test_load_instruments(provider, betfair_client):
-    # provider.load_instruments()
-    load_instruments(betfair_client)
+    markets = load_markets(betfair_client, filter={"event_type_name": "Basketball"})
+    assert len(markets) == 302
 
 
-def test_load_all(provider):
-    provider.load_all()
+def test_load_markets_metadata(betfair_client):
+    markets = load_markets(betfair_client, filter={"event_type_name": "Basketball"})
+    market_metadata = load_markets_metadata(client=betfair_client, markets=markets)
+    assert isinstance(market_metadata, dict)
+    assert len(market_metadata) == 12035
+
+
+def test_load_instruments(market_metadata):
+    instruments = [
+        instrument
+        for metadata in market_metadata.values()
+        for instrument in make_instrument(metadata)
+    ]
+    assert len(instruments) == 172535
+
+
+# def test_load_all(provider):
+#     provider.load_all()
 
 
 def test_search_instruments(provider):

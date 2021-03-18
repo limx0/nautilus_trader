@@ -524,28 +524,24 @@ cdef class Future(Instrument):
 cdef class BettingInstrument:
     def __init__(
         self,
-        instrument_id: str,
-        competition_id: str,
-        competition_name: str,
-        event_country_code: str,
-        event_description: str,
-        event_id: str,
-        event_name: str,
-        event_open_date: str,
-        event_timezone: str,
-        event_type_id: str,
-        event_type_name: str,
-        market_id: str,
-        market_name: str,
-        market_start_time: str,
-        market_type: str,
-        betting_type: str,
-        selection_id: str,
-        selection_name: str,
-        selection_handicap: str,
+        str venue_name not None,
+        str event_type_id not None,
+        str event_type_name not None,
+        str competition_id not None,
+        str competition_name not None,
+        str event_id not None,
+        str event_name not None,
+        str event_country_code not None,
+        datetime event_open_date not None,
+        str betting_type not None,
+        str market_id not None,
+        str market_name not None,
+        datetime market_start_time not None,
+        str market_type not None,
+        str selection_id not None,
+        str selection_name not None,
+        str selection_handicap not None,
     ):
-        self.instrument_id = instrument_id
-
         # Event type (Sport) info e.g. Basketball
         self.event_type_id = event_type_id
         self.event_type_name = event_type_name
@@ -558,9 +554,7 @@ cdef class BettingInstrument:
         self.event_id = event_id
         self.event_name = event_name
         self.event_country_code = event_country_code
-        self.event_description = event_description
         self.event_open_date = event_open_date
-        self.event_timezone = event_timezone
 
         # Market Info e.g. Match odds / Handicap
         self.betting_type = betting_type
@@ -573,3 +567,9 @@ cdef class BettingInstrument:
         self.selection_id = selection_id
         self.selection_name = selection_name
         self.selection_handicap = selection_handicap
+        self.id = InstrumentId(symbol=self.make_symbol(), venue=Venue(venue_name))
+
+    def make_symbol(self):
+        keys = ("event_type_name", "competition_name", "event_name", "event_open_date", "betting_type", "market_type",
+                "market_name", "selection_name", "selection_handicap")
+        return Symbol(value="|".join([str(getattr(self, k)) for k in keys]))

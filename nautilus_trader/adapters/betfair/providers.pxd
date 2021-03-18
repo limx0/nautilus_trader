@@ -25,6 +25,6 @@ cdef class BetfairInstrumentProvider(InstrumentProvider):
     cdef readonly venue
 
     cpdef Currency currency(self, str code)
-    # cdef void _load_instruments(self) except *
+    cdef void _load_instruments(self) except *
     cdef void _load_currencies(self) except *
     cdef Instrument _parse_instrument(self, InstrumentId instrument_id, dict values)
