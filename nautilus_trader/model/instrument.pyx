@@ -540,37 +540,36 @@ cdef class BettingInstrument:
         market_start_time: str,
         market_type: str,
         betting_type: str,
-        runner_handicap: str,
-        runner_id: str,
-        runner_name: str,
-        runner_sort_priority: str,
+        selection_id: str,
+        selection_name: str,
+        selection_handicap: str,
     ):
         self.instrument_id = instrument_id
 
-        # Event Info - Basketball
+        # Event type (Sport) info e.g. Basketball
         self.event_type_id = event_type_id
         self.event_type_name = event_type_name
+
+        # Competition e.g. NBA
+        self.competition_id = competition_id
+        self.competition_name = competition_name
+
+        # Event info e.g. Utah Jazz @ Boston Celtics Wed 17 Mar, 10:40
+        self.event_id = event_id
+        self.event_name = event_name
         self.event_country_code = event_country_code
         self.event_description = event_description
         self.event_open_date = event_open_date
         self.event_timezone = event_timezone
 
-        # Competition - NBA
-        self.competition_id = competition_id
-        self.competition_name = competition_name
-
-        # Event Name e.g. Utah Jazz @ Boston Celtics Wed 17 Mar, 10:40
-        self.event_id = event_id
-        self.event_name = event_name
-
-        # Market Info - Match odds / Handicap
+        # Market Info e.g. Match odds / Handicap
         self.betting_type = betting_type
         self.market_id = market_id
         self.market_type = market_type
         self.market_name = market_name
         self.market_start_time = market_start_time
 
-        # Runner info - The selection you're betting on (LA Lakers)
-        self.runner_id = runner_id
-        self.runner_name = runner_name
-        self.runner_handicap = runner_handicap
+        # Selection/Runner (individual selection/runner) e.g. (LA Lakers)
+        self.selection_id = selection_id
+        self.selection_name = selection_name
+        self.selection_handicap = selection_handicap
